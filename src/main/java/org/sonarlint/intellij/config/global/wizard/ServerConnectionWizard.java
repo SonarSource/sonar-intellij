@@ -25,7 +25,7 @@ import com.intellij.ide.wizard.AbstractWizardStepEx;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import org.sonarlint.intellij.config.global.ServerConnection;
+import org.sonarlint.intellij.config.global.ServerConnectionWithAuth;
 import org.sonarlint.intellij.documentation.SonarLintDocumentation;
 
 public class ServerConnectionWizard {
@@ -43,21 +43,21 @@ public class ServerConnectionWizard {
     return wizard;
   }
 
-  public static ServerConnectionWizard forNewConnection(ServerConnection prefilledConnection, Set<String> existingNames) {
-    var wizard = new ServerConnectionWizard(new WizardModel(prefilledConnection));
+  public static ServerConnectionWizard forNewConnection(String serverUrl, Set<String> existingNames) {
+    var wizard = new ServerConnectionWizard(new WizardModel(serverUrl));
     var steps = createSteps(wizard.model, false, existingNames);
     wizard.wizardEx = new ServerConnectionWizardEx(steps, "New Connection");
     return wizard;
   }
 
-  public static ServerConnectionWizard forConnectionEdition(ServerConnection connectionToEdit) {
+  public static ServerConnectionWizard forConnectionEdition(ServerConnectionWithAuth connectionToEdit) {
     var wizard = new ServerConnectionWizard(new WizardModel(connectionToEdit));
     var steps = createSteps(wizard.model, true, Collections.emptySet());
     wizard.wizardEx = new ServerConnectionWizardEx(steps, "Edit Connection");
     return wizard;
   }
 
-  public static ServerConnectionWizard forNotificationsEdition(ServerConnection connectionToEdit) {
+  public static ServerConnectionWizard forNotificationsEdition(ServerConnectionWithAuth connectionToEdit) {
     var wizard = new ServerConnectionWizard(new WizardModel(connectionToEdit));
     // Assume notifications are supported, if not, why would we want to edit the setting
     wizard.model.setNotificationsSupported(true);
@@ -80,8 +80,8 @@ public class ServerConnectionWizard {
     return wizardEx.showAndGet();
   }
 
-  public ServerConnection getConnection() {
-    return model.createConnection();
+  public ServerConnectionWithAuth getConnectionWithAuth() {
+    return model.createConnectionWithAuth();
   }
 
   private static class ServerConnectionWizardEx extends AbstractWizardEx {

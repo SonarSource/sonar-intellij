@@ -17,22 +17,16 @@
  * License along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
  */
-package org.sonarlint.intellij.config.global.wizard
+package org.sonarlint.intellij.core
 
-import org.sonarlint.intellij.config.global.ServerConnection
-import org.sonarlint.intellij.config.global.ServerConnectionService
-import org.sonarlint.intellij.util.runOnPooledThread
+sealed interface ServerProductDocumentation {
+    fun smartNotificationsHelp(): String
+}
 
-open class ServerConnectionCreator {
+object SonarCloudDocumentation : ServerProductDocumentation {
+    override fun smartNotificationsHelp() = "https://docs.sonarcloud.io/advanced-setup/sonarlint-smart-notifications/"
+}
 
-    open fun createThroughWizard(serverUrl: String): ServerConnection? {
-        val serverConnectionService = ServerConnectionService.getInstance()
-        val wizard = ServerConnectionWizard.forNewConnection(serverUrl, serverConnectionService.getServerNames())
-        if (wizard.showAndGet()) {
-            val created = wizard.connectionWithAuth
-            runOnPooledThread { serverConnectionService.addServerConnection(created) }
-            return created.connection
-        }
-        return null
-    }
+object SonarQubeDocumentation : ServerProductDocumentation {
+    override fun smartNotificationsHelp() = "https://docs.sonarqube.org/latest/user-guide/sonarlint-connected-mode/"
 }

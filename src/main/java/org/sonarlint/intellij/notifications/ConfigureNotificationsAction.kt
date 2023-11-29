@@ -25,29 +25,28 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.WindowManager
 import org.sonarlint.intellij.common.ui.SonarLintConsole
-import org.sonarlint.intellij.config.Settings
+import org.sonarlint.intellij.config.global.ServerConnectionService
 import org.sonarlint.intellij.config.global.wizard.ServerConnectionWizard
 import org.sonarlint.intellij.ui.UiUtils.Companion.runOnUiThread
+import org.sonarlint.intellij.util.runOnPooledThread
 
 class ConfigureNotificationsAction(private val connectionName: String, private val project: Project) : NotificationAction("Configure") {
 
     override fun actionPerformed(e: AnActionEvent, notification: Notification) {
-        WindowManager.getInstance().getFrame(e.project) ?: return
-        runOnUiThread(project) {
-            val connectionToEdit = Settings.getGlobalSettings().serverConnections.find { it.name == connectionName }
-            if (connectionToEdit != null) {
-                val wizard = ServerConnectionWizard.forNotificationsEdition(connectionToEdit)
-                if (wizard.showAndGet()) {
-                    val editedConnection = wizard.connection
-                    val serverConnections = Settings.getGlobalSettings().serverConnections.toMutableList()
-                    serverConnections[serverConnections.indexOf(connectionToEdit)] = editedConnection
-                    Settings.getGlobalSettings().serverConnections = serverConnections
-                }
-            } else if (e.project != null) {
-                SonarLintConsole.get(e.project!!).error("Unable to find connection with name: $connectionName")
-                notification.expire()
-            }
+        WindowManager.getInstance().getFrame(project) ?: return
+        runOnPooledThread(project) {
+            ServerConnectionService.getInstance().getServerConnectionWithAuthByName(connectionName)
+                    .ifPresentOrElse({
+                        runOnUiThread(project) {
+                            val wizard = ServerConnectionWizard.forNotificationsEdition(it)
+                            if (wizard.showAndGet()) {
+                                runOnPooledThread(project) { ServerConnectionService.getInstance().replaceConnection(wizard.connectionWithAuth) }
+                            }
+                        }
+                    }, {
+                        SonarLintConsole.get(project).error("Unable to find connection with name: $connectionName")
+                        notification.expire()
+                    })
         }
     }
-
 }

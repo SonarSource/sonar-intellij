@@ -17,22 +17,21 @@
  * License along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
  */
-package org.sonarlint.intellij.config.global.wizard
+package org.sonarlint.intellij.fixtures
 
 import org.sonarlint.intellij.config.global.ServerConnection
-import org.sonarlint.intellij.config.global.ServerConnectionService
-import org.sonarlint.intellij.util.runOnPooledThread
+import org.sonarlint.intellij.config.global.ServerConnectionCredentials
+import org.sonarlint.intellij.config.global.SonarCloudConnection
+import org.sonarlint.intellij.config.global.SonarQubeConnection
+import org.sonarlint.intellij.config.global.wizard.PartialConnection
+import org.sonarlint.intellij.core.SonarProduct
 
-open class ServerConnectionCreator {
-
-    open fun createThroughWizard(serverUrl: String): ServerConnection? {
-        val serverConnectionService = ServerConnectionService.getInstance()
-        val wizard = ServerConnectionWizard.forNewConnection(serverUrl, serverConnectionService.getServerNames())
-        if (wizard.showAndGet()) {
-            val created = wizard.connectionWithAuth
-            runOnPooledThread { serverConnectionService.addServerConnection(created) }
-            return created.connection
-        }
-        return null
-    }
+fun newSonarQubeConnection(name: String = "id", hostUrl: String = "https://host"): ServerConnection {
+    return SonarQubeConnection(name, hostUrl, true)
 }
+
+fun newSonarCloudConnection(name: String, organizationKey: String): ServerConnection {
+    return SonarCloudConnection(name, organizationKey, true)
+}
+
+fun newPartialConnection(serverUrl: String = "https://serverUrl") = PartialConnection(serverUrl, SonarProduct.SONARQUBE, "orgKey", ServerConnectionCredentials(null, null, "token"))

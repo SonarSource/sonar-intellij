@@ -29,12 +29,21 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 
 class ReadActionUtils {
+
     companion object {
+        private const val ERROR_MESSAGE = "Error while running a read action safely"
+
         @JvmStatic
         fun runReadActionSafely(project: Project, action: Runnable) {
             if (!project.isDisposed) {
-                return ReadAction.run<Exception> {
-                    if (!project.isDisposed) action.run()
+                ReadAction.run<Exception> {
+                    if (!project.isDisposed) {
+                        try {
+                            action.run()
+                        } catch (e: Exception) {
+                            SonarLintConsole.get(project).error(ERROR_MESSAGE, e)
+                        }
+                    }
                 }
             }
         }
@@ -42,15 +51,26 @@ class ReadActionUtils {
         @JvmStatic
         fun <T> computeReadActionSafely(action: ThrowableComputable<T, out Exception>): T {
             return ReadAction.compute<T, Exception> {
-                action.compute()
+                try {
+                    action.compute()
+                } catch (e: Exception) {
+                    null
+                }
             }
         }
 
         @JvmStatic
         fun <T> computeReadActionSafely(project: Project, action: ThrowableComputable<T, out Exception>): T? {
             if (!project.isDisposed) {
-                return ReadAction.compute<T?, Exception> {
-                    if (project.isDisposed) null else action.compute()
+                ReadAction.compute<T?, Exception> {
+                    if (project.isDisposed) null else {
+                        try {
+                            action.compute()
+                        } catch (e: Exception) {
+                            SonarLintConsole.get(project).error(ERROR_MESSAGE, e)
+                            null
+                        }
+                    }
                 }
             }
             return null
@@ -60,7 +80,14 @@ class ReadActionUtils {
         fun <T> computeReadActionSafely(module: Module, action: ThrowableComputable<T, out Exception>): T? {
             if (!module.isDisposed) {
                 return ReadAction.compute<T?, Exception> {
-                    if (module.isDisposed) null else action.compute()
+                    if (module.isDisposed) null else {
+                        try {
+                            action.compute()
+                        } catch (e: Exception) {
+                            SonarLintConsole.get(module.project).error(ERROR_MESSAGE, e)
+                            null
+                        }
+                    }
                 }
             }
             return null
@@ -69,7 +96,14 @@ class ReadActionUtils {
         @JvmStatic
         fun <T> computeReadActionSafely(psiFile: PsiFile, action: ThrowableComputable<T, out Exception>): T? {
             return ReadAction.compute<T?, Exception> {
-                if (!psiFile.isValid) null else action.compute()
+                if (!psiFile.isValid) null else {
+                    try {
+                        action.compute()
+                    } catch (e: Exception) {
+                        SonarLintConsole.get(psiFile.project).error(ERROR_MESSAGE, e)
+                        null
+                    }
+                }
             }
         }
 
@@ -77,7 +111,14 @@ class ReadActionUtils {
         fun <T> computeReadActionSafely(virtualFile: VirtualFile, project: Project, action: ThrowableComputable<T, out Exception>): T? {
             if (!project.isDisposed) {
                 return ReadAction.compute<T, Exception> {
-                    if (project.isDisposed || !virtualFile.isValid) null else action.compute()
+                    if (project.isDisposed || !virtualFile.isValid) null else {
+                        try {
+                            action.compute()
+                        } catch (e: Exception) {
+                            SonarLintConsole.get(project).error(ERROR_MESSAGE, e)
+                            null
+                        }
+                    }
                 }
             }
             return null
@@ -90,7 +131,12 @@ class ReadActionUtils {
             action: Computable<T>
         ): T? {
             if (!project.isDisposed && virtualFile.isValid) {
-                return DumbService.getInstance(project).runReadActionInSmartMode(action)
+                return try {
+                    DumbService.getInstance(project).runReadActionInSmartMode(action)
+                } catch (e: Exception) {
+                    SonarLintConsole.get(project).error(ERROR_MESSAGE, e)
+                    null
+                }
             }
             return null
         }
@@ -98,8 +144,15 @@ class ReadActionUtils {
         @JvmStatic
         fun <T> computeReadActionSafely(virtualFile: VirtualFile, action: ThrowableComputable<T, out Exception>): T? {
             return ReadAction.compute<T?, Exception> {
-                if (!virtualFile.isValid) null else action.compute()
+                if (!virtualFile.isValid) null else {
+                    try {
+                        action.compute()
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
             }
         }
     }
+
 }
